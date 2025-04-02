@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Video Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg.js/0.11.0/ffmpeg.min.js"></script>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        video { width: 60%; margin-top: 20px; }
+        .controls { margin: 10px; }
+    </style>
+</head>
+<body>
+    <h2>Advanced Video Editor</h2>
+    <input type="file" id="videoInput" accept="video/*"><br>
+    <video id="videoPlayer" controls></video><br>
+    <div class="controls">
+        <button onclick="trimVideo()">Trim Video (First 5 sec)</button>
+        <button onclick="addTextOverlay()">Add Text Overlay</button>
+        <button onclick="applyFilter()">Apply Grayscale Filter</button>
+        <button onclick="mergeVideos()">Merge Another Video</button>
+        <button onclick="removeAudio()">Remove Audio</button>
+        <button onclick="changeSpeed(2)">Speed Up (2x)</button>
+        <button onclick="changeSpeed(0.5)">Slow Down (0.5x)</button>
+        <button onclick="cropVideo()">Crop Video (Center 200x200)</button>
+        <button onclick="rotateVideo(90)">Rotate Video (90°)</button>
+        <button onclick="rotateVideo(180)">Rotate Video (180°)</button>
+        <button onclick="adjustBrightness(0.5)">Decrease Brightness</button>
+        <button onclick="adjustBrightness(1.5)">Increase Brightness</button>
+        <button onclick="adjustColor(1.2, 0.8, 1.0)">Color Correction</button>
+        <button onclick="changeAspectRatio(16,9)">Change Ratio (16:9)</button>
+        <button onclick="changeAspectRatio(4,3)">Change Ratio (4:3)</button>
+        <button onclick="addWatermark()">Add Watermark</button>
+        <button onclick="applyBlur()">Apply Blur Effect</button>
+        <button onclick="removeGreenScreen()">Remove Green Screen</button>
+        <button onclick="applyFadeEffect()">Add Fade Transition</button>
+    </div>
+    <script>
+        let videoFile;
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+
+        async function loadFFmpeg() {
+            if (!ffmpeg.isLoaded()) {
+                await ffmpeg.load();
+            }
+        }
+
+        document.getElementById('videoInput').addEventListener('change', function(event) {
+            videoFile = event.target.files[0];
+            let videoURL = URL.createObjectURL(videoFile);
+            document.getElementById('videoPlayer').src = videoURL;
+        });
+
+        async function applyBlur() {
+            await processVideo(['-i', 'input.mp4', '-vf', 'boxblur=5:1', '-c:a', 'copy', 'output.mp4'], 'blurred_video.mp4');
+        }
+
+        async function removeGreenScreen() {
+            await processVideo(['-i', 'input.mp4', '-vf', "colorkey=0x00ff00:0.3:0.2", '-c:a', 'copy', 'output.mp4'], 'no_green_video.mp4');
+        }
+
+        async function applyFadeEffect() {
+            await processVideo(['-i', 'input.mp4', '-vf', 'fade=in:0:30,fade=out:120:30', '-c:a', 'copy', 'output.mp4'], 'faded_video.mp4');
+        }
+
+        async function processVideo(commands, outputFileName) {
+            if (!videoFile) {
+                alert('Please select a video first!');
+                return;
+            }
+            await loadFFmpeg();
+            ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(videoFile));
+            await ffmpeg.run(...commands);
+            const data = ffmpeg.FS('readFile', 'output.mp4');
+            downloadFile(data, outputFileName);
+        }
+
+        function downloadFile(data, filename) {
+            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
